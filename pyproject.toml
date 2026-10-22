@@ -1,0 +1,61 @@
+[project]
+name = "eagleradar"
+version = "0.1.0"
+description = "Web demonstrator: detect and map location hints in social media posts (use case: Berlin power outage, January 2026)."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+authors = [{ name = "WI-Projekt Team" }]
+
+# Core dependencies: libraries for the app, data handling, matching and clustering.
+# Heavy ML libraries are optional extras (see below) so CI stays fast.
+dependencies = [
+    "streamlit>=1.38",
+    "streamlit-folium>=0.22",
+    "folium>=0.17",
+    "pandas>=2.2",
+    "pydantic>=2.7",
+    "rapidfuzz>=3.9",
+    "scikit-learn>=1.5",
+    "geopy>=2.4",
+    "requests>=2.32",
+    "python-dotenv>=1.0",
+    "pillow>=10.4",
+]
+
+[project.optional-dependencies]
+# spaCy NER as a second location detector (model: de_core_news_lg, see README)
+nlp = ["spacy>=3.7"]
+# OCR on images / video frames
+vision = ["easyocr>=1.7", "opencv-python-headless>=4.10"]
+# Semantic duplicate detection
+embeddings = ["sentence-transformers>=3.0"]
+# Build the full Berlin gazetteer from OpenStreetMap
+osm = ["osmnx>=1.9", "geopandas>=1.0"]
+all = ["eagleradar[nlp,vision,embeddings,osm]"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "pre-commit>=3.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eagleradar"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
