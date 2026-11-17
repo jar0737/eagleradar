@@ -22,10 +22,36 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: lint
+    # Throwaway PostGIS database for this job, same image as compose.yaml.
+    # Only exists while the job runs; the credentials are not secret.
+    services:
+      db:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: eagleradar
+          POSTGRES_PASSWORD: eagleradar
+          POSTGRES_DB: eagleradar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eagleradar -d eagleradar"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://eagleradar:eagleradar@localhost:5432/eagleradar
+      EAGLERADAR_REQUIRE_DB: "1" # database tests fail instead of being skipped
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
       - run: uv sync --frozen
+      # Applied twice: the second run proves the schema is safe to re-run (IF NOT EXISTS).
+      - name: Create database schema
+        run: |
+          for run in 1 2; do
+            docker exec -i -e PGOPTIONS=--client-min-messages=warning ${{ job.services.db.id }} \
+              psql -v ON_ERROR_STOP=1 -q -U eagleradar -d eagleradar < db/schema.sql
+          done
       - run: uv run pytest --cov=eagleradar --cov-report=term
