@@ -20,6 +20,7 @@ dependencies = [
     "requests>=2.32",
     "python-dotenv>=1.0",
     "pillow>=10.4",
+    "psycopg[binary]>=3.2",
 ]
 
 [project.optional-dependencies]

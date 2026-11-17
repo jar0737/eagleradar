@@ -1,0 +1,26 @@
+# Local PostgreSQL + PostGIS for development.
+#   docker compose up -d      start the database
+#   docker compose down       stop it (data is kept in the "pgdata" volume)
+#   docker compose down -v    stop it AND delete all data
+# Credentials come from .env (see .env.example).
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: eagleradar-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eagleradar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eagleradar}
+      POSTGRES_DB: ${POSTGRES_DB:-eagleradar}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
