@@ -12,17 +12,31 @@ uv run pytest                   # everything green? You're ready.
 
 ## Workflow
 
-1. Pick or create an **issue** in GitHub (templates: *Feature*, *Bug*).
-2. Create a branch from `main`:
-   `feature/<issue-nr>-short-name`, `fix/<issue-nr>-short-name`, `docs/...`
-3. Commit small steps with clear messages:
-   `feat: add OCR for video frames`, `fix: handle empty upload`, `docs: explain gazetteer`
-4. Push and open a **pull request** (the template has a checklist).
-5. At least **one review** by another team member, then merge. CI must be green.
-6. `main` is protected: no direct pushes.
+**Where tasks live:** every piece of work is a **GitHub Issue** (templates: *Feature*, *Bug*);
+its number is the task's unique ID. **Trello** is the team board for everything around the
+issues (who works on what, meetings, research, deadlines).
 
-GitHub settings to enable once (admin): *Settings → Branches → Add branch ruleset* for `main`:
-require a pull request before merging (1 approval) and require status checks to pass (`lint`, `test`).
+1. Pick or create an **issue** in GitHub.
+2. Create a branch from `main`, named `<type>/<issue-nr>-<short-name>`:
+
+   | Type | Use it for | Example |
+   |---|---|---|
+   | `feature/` | New functionality | `feature/12-gazetteer` |
+   | `fix/` | Bug fixes | `fix/31-street-abbreviations` |
+   | `docs/` | Documentation only | `docs/18-setup-guide` |
+   | `test/` | Tests or the evaluation set | `test/25-labelled-posts` |
+   | `refactor/` | Restructuring without new behaviour | `refactor/40-split-db-queries` |
+   | `chore/` | Setup, dependencies, CI, config | `chore/7-ci-python-312` |
+
+   Lowercase English, words joined with hyphens, no spaces or umlauts. One branch = one issue.
+3. Commit small steps with clear messages ([Conventional Commits](https://www.conventionalcommits.org/)):
+   `feat(geo): build gazetteer`, `fix(nlp): handle "Str." abbreviation`, `docs: explain gazetteer`
+4. Push and open a **pull request** (the template has a checklist). Write `Closes #<issue-nr>`
+   in the description, so the issue closes when the pull request is merged.
+5. At least **one approving review** by another team member, then merge. CI must be green.
+
+`main` is protected by the ruleset `protect-main`: changes only via pull request with 1 approval
+and green `lint` and `test` checks; no direct pushes, force pushes or deletion.
 
 ## Module ownership
 

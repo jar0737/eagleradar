@@ -6,7 +6,7 @@ Replace every comment below; delete sections that don't apply.
 
 ## What does this change?
 
-<!-- 1–3 sentences: what changed and why. Link the task: Closes #12, or the Trello card link. -->
+<!-- 1–3 sentences: what changed and why. Link the issue: Closes #12 -->
 
 **Part / module:** <!-- e.g. Part 2 – Database (db/) -->
 
@@ -14,7 +14,7 @@ Replace every comment below; delete sections that don't apply.
 
 <!--
 Exact steps the reviewer runs on their own machine, and what they should see. Example:
-1. git switch feature/12-geo-gazetteer && uv sync
+1. git switch feature/12-gazetteer && uv sync
 2. docker compose up -d
 3. uv run pytest
 Expected: all tests pass; the map shows the new markers.
@@ -22,7 +22,7 @@ Expected: all tests pass; the map shows the new markers.
 
 ## Checklist
 
-- [ ] Branch name follows `<type>/<issue-nr>-<module>-<short-description>`
+- [ ] Branch name follows `<type>/<issue-nr>-<short-name>` (see `docs/contributing.md`)
 - [ ] `uv run pytest` passes locally
 - [ ] New behaviour has a test in `tests/`
 - [ ] Documentation updated (README or `docs/`) in this PR
