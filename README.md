@@ -18,7 +18,7 @@ posts, detect duplicates and show them as markers on an interactive map with
 | Detect place mentions in text (NLP) | `nlp/` | ⬜ open |
 | Detect event types | `nlp/` | ⬜ open |
 | Detect place names in images / video (CV) | `vision/` | ⬜ open |
-| Geocode place names (e.g. "Tiergartenstr.") | `geo/` | ⬜ open |
+| Geocode place names (e.g. "Tiergartenstr.") | `geo/` | ✅ done |
 | Group similar posts, detect duplicates | `clustering/` | ⬜ open |
 | Map markers with source, time and type | `app.py` | ⬜ open |
 

@@ -61,3 +61,45 @@ CREATE TABLE IF NOT EXISTS geocode_cache (
     provider   TEXT        NOT NULL,                  -- 'gazetteer', 'nominatim', ...
     fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Gazetteer: places in Berlin with coordinates, used for offline geocoding (FA-06).
+-- Filled from data/sample/gazetteer.csv with: uv run python -m eagleradar.geo.gazetteer
+-- A street that runs through several localities has one row per locality.
+CREATE TABLE IF NOT EXISTS places (
+    id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name      TEXT NOT NULL,                      -- official name, e.g. 'Teltower Damm'
+    name_norm TEXT NOT NULL,                      -- normalized for lookup, e.g. 'teltower damm'
+    variants  TEXT[] NOT NULL DEFAULT '{}',       -- normalized alternatives, e.g. 'u krumme lanke'
+    kind      TEXT NOT NULL
+              CHECK (kind IN ('street', 'station', 'landmark', 'locality', 'district')),
+    part      INTEGER NOT NULL DEFAULT 0,         -- same name and part = one continuous street
+    length_m  INTEGER NOT NULL DEFAULT 0,         -- length of the street in this locality
+    locality  TEXT,                               -- Ortsteil, e.g. 'Zehlendorf'
+    district  TEXT,                               -- Bezirk, e.g. 'Steglitz-Zehlendorf'
+    geom      geometry(Point, 4326) NOT NULL,
+    source    TEXT NOT NULL,                      -- 'osm', 'alkis'
+    UNIQUE NULLS NOT DISTINCT (name, kind, locality)
+);
+
+CREATE INDEX IF NOT EXISTS places_name_norm_idx ON places (name_norm);
+CREATE INDEX IF NOT EXISTS places_variants_idx ON places USING GIN (variants);
+CREATE INDEX IF NOT EXISTS places_geom_idx ON places USING GIST (geom);
+
+-- Result of the geocoding: NULL = not processed yet, 'ambiguous' = several possible places,
+-- 'unknown' = not in the gazetteer. Only 'found' has coordinates.
+ALTER TABLE place_mentions ADD COLUMN IF NOT EXISTS geocode_status TEXT
+    CHECK (geocode_status IN ('found', 'ambiguous', 'unknown'));
+
+-- Posts that cannot be shown on the map ("ohne Ort", FA-06 and FA-12), with the reason.
+CREATE OR REPLACE VIEW posts_without_place AS
+SELECT p.id AS post_id,
+       CASE
+           WHEN count(m.id) = 0 THEN 'no_mention'
+           WHEN bool_or(m.geocode_status = 'ambiguous') THEN 'ambiguous'
+           WHEN bool_or(m.geocode_status = 'unknown') THEN 'unknown'
+           ELSE 'pending'
+       END AS reason
+FROM posts p
+LEFT JOIN place_mentions m ON m.post_id = p.id
+GROUP BY p.id
+HAVING count(m.geom) = 0;
