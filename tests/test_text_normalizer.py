@@ -6,7 +6,8 @@ def test_normalize_whitespace():
 
     result = normalize_text(text)
 
-    assert result == "Bhf Südkreuz"
+    assert result == "Bhf    Südkreuz"
+    assert len(result) == len(text)
 
 
 def test_normalize_leading_and_trailing_whitespace():
@@ -14,7 +15,8 @@ def test_normalize_leading_and_trailing_whitespace():
 
     result = normalize_text(text)
 
-    assert result == "Kotti"
+    assert result == "  Kotti  "
+    assert len(result) == len(text)
 
 
 def test_normalize_empty_text():
@@ -22,15 +24,15 @@ def test_normalize_empty_text():
 
 
 def test_normalize_none_like_empty_input():
-    assert normalize_text("") == ""
+    assert normalize_text(None) == ""
 
 
 def test_normalize_preserves_capitalization():
-    text = "KOTTI"
+    text = "Bhf Südkreuz"
 
     result = normalize_text(text)
 
-    assert result == "KOTTI"
+    assert result == "Bhf Südkreuz"
 
 
 def test_normalize_preserves_umlauts():

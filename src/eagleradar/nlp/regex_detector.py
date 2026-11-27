@@ -1,12 +1,14 @@
 import re
-from typing import Literal
 
-from eagleradar.nlp.place_mention import PlaceMention
+from eagleradar.nlp.place_mention import (
+    IntersectionRelation,
+    PlaceMention,
+)
 
 STREET_SUFFIXES = [
     "straße",
-    "str.",
     "strasse",
+    "str.",
     "str",
     "chaussee",
     "weg",
@@ -24,60 +26,61 @@ STREET_SUFFIXES = [
     "korso",
 ]
 
+STREET_SUFFIX_PATTERN = (
+    r"(?:" + "|".join(re.escape(s) for s in sorted(STREET_SUFFIXES, key=len, reverse=True)) + r")"
+)
+
+# Beispiele:
+# Friedrichstraße
+# Leipziger Straße
+STREET_NAME_PATTERN = (
+    r"(?:"
+    r"[A-ZÄÖÜ][\wäöüß-]*" + STREET_SUFFIX_PATTERN + r"|"
+    r"[A-ZÄÖÜ][\wäöüß-]*\s+" + STREET_SUFFIX_PATTERN + r")"
+)
 
 STREET_PATTERN = re.compile(
-    r"\b"
-    r"(?!(?:auf|an|in|der|die|das|dem|den|am|zum|zur)\b)"
-    r"[A-ZÄÖÜ][\wÄÖÜäöüß-]*"
-    r"(?:\s+[A-ZÄÖÜ][\wÄÖÜäöüß-]*){0,2}"
-    r"\s+(?:" + "|".join(re.escape(suffix) for suffix in STREET_SUFFIXES) + r")" + r"(?!\w)",
+    r"(?<!\w)" + STREET_NAME_PATTERN + r"(?!\w)",
     re.IGNORECASE,
 )
+
 
 STATION_NAME_TOKEN = (
-    r"(?!(?:und|oder|am|an|in|bei|auf|mit|von|zu|der|die|das)\b)" r"[A-ZÄÖÜ][\wÄÖÜäöüß-]*"
+    r"(?!(?i:und|oder|am|an|in|bei|auf|mit|von|zu|der|die|das|"
+    r"steht|stehen|geht|gehts|fährt|ist|sind|richtung)\b)"
+    r"[A-ZÄÖÜ][\wÄÖÜäöüß-]*"
 )
 
-# Bahnhof-Bezeichnungen
 STATION_PREFIX_PATTERN = re.compile(
-    r"\b(?:Bahnhof|Bhf\.?|Bf\.?)"
+    r"(?i:\b(?:Bahnhof|Bhf\.?|Bf\.?))"
     r"\s+" + STATION_NAME_TOKEN + r"(?:\s+" + STATION_NAME_TOKEN + r"){0,2}"
-    r"(?=$|[.,!?;:]|\s)",
-    re.IGNORECASE,
+    r"(?=$|[.,!?;:]|\s)"
 )
 
-# U-Bahn- und S-Bahn-Bezeichnungen
 PUBLIC_TRANSPORT_PATTERN = re.compile(
-    r"\b(?:U-Bahn|S-Bahn|U-Bhf\.?|S-Bhf\.?|U|S)"
+    r"(?i:\b(?:U-Bahn|S-Bahn|U-Bhf\.?|S-Bhf\.?))"
     r"\s+" + STATION_NAME_TOKEN + r"(?:\s+" + STATION_NAME_TOKEN + r"){0,2}"
-    r"(?=$|[.,!?;:]|\s)",
+    r"(?=$|[.,!?;:]|\s)"
+)
+
+CONNECTOR_PATTERN = re.compile(
+    r"^\s*(?P<connector>und|/|&)\s*$",
     re.IGNORECASE,
 )
 
-INTERSECTION_PATTERN = re.compile(
-    r"\b(?:Ecke|Kreuzung)\s+"
-    r"(?P<street1>.+?)"
-    r"\s*(?:/|&|\bund\b)\s*"
-    r"(?P<street2>.+?)"
-    r"(?=$|[!?;])",
-    re.IGNORECASE,
-)
 
-PlaceSource = Literal[
-    "video_description",
-    "voice_to_text",
-    "hashtag_names",
-    "ocr",
-]
+def find_regex_places(
+    text: str,
+    source: str = "video_description",
+) -> list[PlaceMention]:
+    """Erkennt Straßen- und Haltestellennamen mit Regex."""
 
-
-def find_regex_places(text: str, source: PlaceSource = "video_description") -> list[PlaceMention]:
     if not text or not text.strip():
         return []
 
     places = []
 
-    def add_place(start: int, end: int, place_type: str) -> None:
+    def add_place(start, end, place_type):
         mention_text = text[start:end]
 
         places.append(
@@ -93,43 +96,85 @@ def find_regex_places(text: str, source: PlaceSource = "video_description") -> l
             )
         )
 
-    # Intersections: extract both streets separately
-    for match in INTERSECTION_PATTERN.finditer(text):
-        start = match.start()
-        end = match.end()
-
-        # Extract the complete intersection expression
-        intersection_text = text[start:end]
-
-        # Remove the introductory word "Ecke" or "Kreuzung"
-        prefix_match = re.match(
-            r"(?:Ecke|Kreuzung)\s+",
-            intersection_text,
-            re.IGNORECASE,
-        )
-
-        if prefix_match:
-            start += prefix_match.end()
-
-        add_place(start, end, "intersection")
-
-    # Station prefixes
-    for match in STATION_PREFIX_PATTERN.finditer(text):
-        add_place(match.start(), match.end(), "station")
-
-    # Public transport stations
-    for match in PUBLIC_TRANSPORT_PATTERN.finditer(text):
-        add_place(match.start(), match.end(), "station")
-
-    # Street names
     for match in STREET_PATTERN.finditer(text):
         add_place(match.start(), match.end(), "street")
 
-    # Remove duplicate matches while preserving detection order
+    for match in STATION_PREFIX_PATTERN.finditer(text):
+        add_place(match.start(), match.end(), "station")
+
+    for match in PUBLIC_TRANSPORT_PATTERN.finditer(text):
+        add_place(match.start(), match.end(), "station")
+
+    # Doppelte Treffer anhand ihrer Textposition entfernen.
     unique_places = {}
 
     for place in places:
         key = (place.start, place.end)
-        unique_places[key] = place
 
-    return list(unique_places.values())
+        if key not in unique_places:
+            unique_places[key] = place
+
+    return sorted(
+        unique_places.values(),
+        key=lambda place: (place.start, place.end),
+    )
+
+
+def find_regex_relations(
+    text: str,
+    places: list[PlaceMention],
+) -> list[IntersectionRelation]:
+    """Erkennt Beziehungen zwischen zwei Straßen an Kreuzungen."""
+
+    if not text or not places:
+        return []
+
+    streets = sorted(
+        [place for place in places if place.type == "street"],
+        key=lambda place: (place.start, place.end),
+    )
+
+    relations = []
+
+    for first, second in zip(streets, streets[1:], strict=False):
+        if first.end > second.start:
+            continue
+
+        between = text[first.end : second.start]
+        connector_match = CONNECTOR_PATTERN.fullmatch(between)
+
+        if connector_match is None:
+            continue
+
+        context_before = text[max(0, first.start - 25) : first.start]
+
+        has_intersection_context = re.search(
+            r"\b(?:Ecke|Kreuzung|an\s+der)\s*$",
+            context_before,
+            re.IGNORECASE,
+        )
+
+        connector = connector_match.group("connector").casefold()
+
+        # "und" allein ist kein ausreichender Hinweis auf eine Kreuzung.
+        # "/" und "&" gelten als explizite Verknüpfung.
+        if not has_intersection_context and connector == "und":
+            continue
+
+        relations.append(
+            IntersectionRelation(
+                street1=first.normalized_name,
+                street2=second.normalized_name,
+                street1_start=first.start,
+                street1_end=first.end,
+                street2_start=second.start,
+                street2_end=second.end,
+                connector=connector,
+                start=first.start,
+                end=second.end,
+                detected_by=["regex"],
+                confidence=(0.9 if has_intersection_context else 0.8),
+            )
+        )
+
+    return relations

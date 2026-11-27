@@ -25,7 +25,10 @@ dependencies = [
 
 [project.optional-dependencies]
 # spaCy NER as a second location detector (model: de_core_news_lg, see README)
-nlp = ["spacy>=3.7"]
+nlp = [
+    "gliner>=0.2.30",
+    "spacy>=3.7",
+]
 # OCR on images / video frames
 vision = ["easyocr>=1.7", "opencv-python-headless>=4.10"]
 # Semantic duplicate detection
