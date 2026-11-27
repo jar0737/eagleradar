@@ -20,6 +20,26 @@ Team rules for handling social media data. Check them with your supervisor and a
 - Fetch only the time window and keywords you need.
 - Downloaded files go to `data/raw/` (git-ignored).
 
+## Geodata
+
+The gazetteer `data/sample/gazetteer.csv` is built from these downloads with
+`scripts/build_gazetteer.py`. Put them in `data/raw/geo/` (git-ignored).
+
+| Download | Content | Source | Licence |
+|---|---|---|---|
+| [`berlin-*-free.shp.zip`](https://download.geofabrik.de/europe/germany/berlin.html) (keep it zipped) | Streets, stations, landmarks | OpenStreetMap, extract by Geofabrik | [ODbL 1.0](https://www.openstreetmap.org/copyright) |
+| [`bezirke.json`](https://gdi.berlin.de/geonetwork/srv/api/records/ced31d7d-353d-373a-b9a9-2251b9498bc0) | 12 districts | ALKIS Berlin Bezirke, Geoportal Berlin | [dl-de/zero-2-0](https://www.govdata.de/dl-de/zero-2-0) |
+| [`ortsteile.json`](https://gdi.berlin.de/geonetwork/srv/api/records/61bd3084-c4b0-34e4-9a00-01daabb315f5) | 97 localities | ALKIS Berlin Ortsteile, Geoportal Berlin | [dl-de/zero-2-0](https://www.govdata.de/dl-de/zero-2-0) |
+
+The two GeoJSON files come from the WFS services `alkis_bezirke` and `alkis_ortsteile` on
+`gdi.berlin.de` (`OUTPUTFORMAT=application/json`, `SRSNAME=EPSG:4326`).
+
+Streets, stations and landmarks are derived from OpenStreetMap: the file stays under the
+ODbL, whatever licence the project gets, and the app must show
+"© OpenStreetMap contributors" with a link to the copyright page.
+
+The gazetteer contains no personal data.
+
 ## External services
 
 | Service | Used for | Policy notes |
